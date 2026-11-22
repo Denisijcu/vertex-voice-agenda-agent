@@ -22,7 +22,7 @@ jobs:
     name: Repo limpio (sin libro ni .env)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: El manuscrito y los .env no se suben nunca
         run: |
           malos=$(git ls-files | grep -E '^libro/|(^|/)\.env$|^telephony/(logs|models)/|^api/(logs|data)/|\.gguf$' || true)
@@ -41,7 +41,7 @@ jobs:
       run:
         working-directory: api
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
@@ -60,7 +60,7 @@ jobs:
       run:
         working-directory: telephony
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -82,7 +82,7 @@ jobs:
       run:
         working-directory: ui
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
@@ -96,6 +96,6 @@ jobs:
     name: Imagen de Asterisk
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: docker build (solo compila, no publica)
         run: docker build -t vva-asterisk:ci telephony/asterisk
