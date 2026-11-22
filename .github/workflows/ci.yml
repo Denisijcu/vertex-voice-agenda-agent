@@ -1,0 +1,101 @@
+# CI de vertex-voice-agenda-agent.
+# Corre lo mismo que se corre a mano en la PC: las pruebas de la API (unittest), las de la pasarela,
+# el build de la UI y el build de la imagen de Asterisk. No necesita LM Studio, ni Docker corriendo
+# en la PC, ni modelos de voz: las pruebas usan un modelo falso y un Asterisk falso.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo:
+    name: Repo limpio (sin libro ni .env)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: El manuscrito y los .env no se suben nunca
+        run: |
+          malos=$(git ls-files | grep -E '^libro/|(^|/)\.env$|^telephony/(logs|models)/|^api/(logs|data)/|\.gguf$' || true)
+          if [ -n "$malos" ]; then
+            echo "Estos archivos no deberían estar en el repo:"; echo "$malos"; exit 1
+          fi
+          echo "OK: nada de libro/, .env, logs, llamadas ni modelos."
+
+  api:
+    name: API (FastAPI + orquestador)
+    runs-on: ubuntu-latest
+    env:
+      # Las pruebas cuentan días hábiles y horarios en la hora de Miami, como en la PC.
+      TZ: America/New_York
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Pruebas (unittest, sin LM Studio)
+        run: python -m unittest discover -s tests -t . -v
+
+  gateway:
+    name: Pasarela de voz (telephony)
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/New_York
+    defaults:
+      run:
+        working-directory: telephony
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: telephony/requirements.txt
+      - name: Dependencias de las pruebas
+        # Whisper y Piper no hacen falta: las pruebas no cargan modelos de voz.
+        run: |
+          grep -vE '^\s*(#|$)|faster-whisper|piper-tts' requirements.txt > /tmp/req-pruebas.txt
+          cat /tmp/req-pruebas.txt
+          pip install -r /tmp/req-pruebas.txt
+      - name: Pruebas (Asterisk falso por AudioSocket)
+        run: python -m unittest discover -s tests -t . -v
+
+  ui:
+    name: UI (Angular)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Build de producción
+        run: npx ng build
+
+  asterisk:
+    name: Imagen de Asterisk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: docker build (solo compila, no publica)
+        run: docker build -t vva-asterisk:ci telephony/asterisk

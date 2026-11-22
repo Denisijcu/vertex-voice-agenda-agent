@@ -1,0 +1,7 @@
+{
+  "contact_name": "Clínica Dental Coral Gables",
+  "phone_or_sip_uri": "sip:denis@vertex.local",
+  "purpose": "dentist_appointment",
+  "context_notes": "Agendar una limpieza dental para Denis Sánchez. Paciente existente. Seguro: Delta Dental.",
+  "dry_run": true
+}

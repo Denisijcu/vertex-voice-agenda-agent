@@ -1,0 +1,6 @@
+# Pasarela de voz — venv PROPIO con Python 3.12 (D:\python312), separado del venv de la API.
+# Versiones con rueda para Windows + Python 3.12 comprobadas.
+faster-whisper==1.2.1
+piper-tts==1.8.0
+numpy==2.5.5
+httpx==0.28.1

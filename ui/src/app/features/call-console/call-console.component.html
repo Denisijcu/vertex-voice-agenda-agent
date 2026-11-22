@@ -1,0 +1,185 @@
+<section class="console-wrapper" aria-label="Consola de llamadas y agenda">
+  <header class="console-header">
+    <div>
+      <p class="eyebrow">VERTEX CODERS // VOICE & AGENDA AGENT</p>
+      <h1 class="title">Consola SIP/RTP y Agenda</h1>
+    </div>
+
+    @if (lastTurn(); as turn) {
+      <mat-chip-set aria-label="Estado del resultado">
+        <mat-chip highlighted>Resultado: {{ turn.outcome }}</mat-chip>
+        @if (turn.terminated) {
+          <mat-chip>Llamada colgada</mat-chip>
+        }
+      </mat-chip-set>
+    }
+  </header>
+
+  @if (errorMessage(); as err) {
+    <mat-card appearance="outlined" class="error-banner" role="alert">
+      <mat-card-content class="error-row">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ err }}</span>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <mat-card appearance="outlined" class="form-card">
+    <mat-card-content class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Modelo local (vacío = el del .env)</mat-label>
+        <input matInput [ngModel]="modelName()" (ngModelChange)="modelName.set($event)" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Clínica a la que llama el asistente</mat-label>
+        <input
+          matInput
+          [disabled]="!!activeCallId()"
+          [ngModel]="contactName()"
+          (ngModelChange)="contactName.set($event)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Teléfono de la clínica (en pruebas: Linphone)</mat-label>
+        <input
+          matInput
+          [disabled]="!!activeCallId()"
+          [ngModel]="destination()"
+          (ngModelChange)="destination.set($event)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Objetivo</mat-label>
+        <mat-select
+          [disabled]="!!activeCallId()"
+          [value]="purpose()"
+          (selectionChange)="purpose.set($event.value)"
+        >
+          <mat-option value="dentist_appointment">Cita dental</mat-option>
+          <mat-option value="employer_outreach">Empleador / Entrevista</mat-option>
+          <mat-option value="client_marketing">Marketing / Servicio</mat-option>
+          <mat-option value="follow_up">Seguimiento</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="span-2">
+        <mat-label>Notas de la llamada</mat-label>
+        <input
+          matInput
+          [disabled]="!!activeCallId()"
+          [ngModel]="contextNotes()"
+          (ngModelChange)="contextNotes.set($event)"
+        />
+      </mat-form-field>
+
+      @if (activeCallId() && !terminated()) {
+        <mat-form-field appearance="outline" class="span-2">
+          <mat-label>Lo que dice la clínica (o "[evento: buzón de voz] ...")</mat-label>
+          <input
+            matInput
+            [ngModel]="callerUtterance()"
+            (ngModelChange)="callerUtterance.set($event)"
+            (keyup.enter)="executeStep()"
+          />
+        </mat-form-field>
+      }
+
+      <div class="actions-bar span-2">
+        <mat-slide-toggle
+          [disabled]="!!activeCallId()"
+          [checked]="dryRun()"
+          (change)="dryRun.set($event.checked)"
+        >
+          Modo Dry-Run (sin puente SIP activado siempre se simula)
+        </mat-slide-toggle>
+
+        <button mat-flat-button type="button" [disabled]="!canStep()" (click)="executeStep()">
+          <mat-icon aria-hidden="true">call</mat-icon>
+          {{ activeCallId() ? 'Siguiente turno' : 'Iniciar llamada' }}
+        </button>
+
+        <button mat-stroked-button type="button" [disabled]="isLoading()" (click)="resetCall()">
+          Nueva Llamada
+        </button>
+      </div>
+    </mat-card-content>
+
+    @if (isLoading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+  </mat-card>
+
+  <app-real-call-panel [target]="target()" [modelName]="modelName()" />
+
+  <app-call-history />
+
+  <h2 class="section-title">Simulador de texto</h2>
+  <p class="section-hint">Tú escribes lo que dice la clínica; sirve para probar el modelo sin teléfono.</p>
+
+  @if (transcript().length) {
+    <mat-card appearance="outlined" class="panel-card">
+      <mat-card-header>
+        <mat-card-title>Transcripción</mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="transcript">
+        @for (line of transcript(); track $index) {
+          <p class="line" [class.agent]="line.speaker === 'agente'">
+            <strong>{{ line.speaker === 'agente' ? 'Asistente' : contactName() || 'Clínica' }}:</strong>
+            {{ line.text }}
+            @for (tool of line.tools; track $index) {
+              <span class="tool-tag">{{ tool }}</span>
+            }
+          </p>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (lastTurn(); as turn) {
+    @if (turn.warnings.length) {
+      <mat-card appearance="outlined" class="warning-card" role="status">
+        <mat-card-header>
+          <mat-card-title>Avisos del turno</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <ul>
+            @for (w of turn.warnings; track $index) {
+              <li>{{ w }}</li>
+            }
+          </ul>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <div class="results-grid">
+      <mat-card appearance="outlined" class="panel-card">
+        <mat-card-header>
+          <mat-card-title>Sesión SIP / RTP</mat-card-title>
+          <mat-card-subtitle>{{ turn.session.session_id }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p><strong>SIP:</strong> {{ turn.session.sip_state }} ({{ turn.session.transport }})</p>
+          <p><strong>RTP:</strong> {{ turn.session.rtp_state }} — {{ turn.session.codec }}</p>
+          <p>
+            <strong>Paquetes RTP:</strong> TX {{ turn.session.rtp_packets_sent }} / RX
+            {{ turn.session.rtp_packets_received }}
+          </p>
+          <p><strong>Respuesta propuesta:</strong> {{ turn.assistant_reply }}</p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined" class="panel-card">
+        <mat-card-header>
+          <mat-card-title>Tool Calls de Agenda</mat-card-title>
+          <mat-card-subtitle>Dry-Run: {{ turn.dry_run ? 'ACTIVO' : 'DESACTIVADO' }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <pre class="json-pre"><code>{{ turn.tool_calls | json }}</code></pre>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</section>

@@ -1,0 +1,13 @@
+# Centralita Asterisk local para llamadas reales con tu celular (Linphone). Sin operador, sin costo.
+# Correr desde E:\vertex-voice-agenda-agent\telephony :   docker compose up --build
+services:
+  asterisk:
+    build: ./asterisk
+    container_name: vva-asterisk
+    env_file: .env
+    ports:
+      - "5060:5060/udp"
+      - "10000-10020:10000-10020/udp"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: "no"

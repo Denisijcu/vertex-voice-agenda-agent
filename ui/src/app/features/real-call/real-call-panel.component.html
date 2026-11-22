@@ -1,0 +1,120 @@
+<mat-card appearance="outlined" class="real-card">
+  <mat-card-header>
+    <mat-card-title>Llamada real a la clínica</mat-card-title>
+    <mat-card-subtitle>
+      Tu asistente llama a la clínica en tu nombre, con la voz de Daniela. En pruebas, la clínica es el celular con
+      Linphone: quien conteste hace de recepcionista.
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div class="line-status" aria-label="Estado de la línea" role="status">
+      @if (line(); as l) {
+        <span class="pill" [class.ok]="l.asterisk" [class.bad]="!l.asterisk">
+          <mat-icon aria-hidden="true">dns</mat-icon> Asterisk
+        </span>
+        <span class="pill" [class.ok]="l.phone === 'Avail'" [class.bad]="l.phone !== 'Avail'">
+          <mat-icon aria-hidden="true">smartphone</mat-icon> {{ phoneLabel(l.phone) }}
+        </span>
+        <span class="pill" [class.ok]="l.gateway" [class.bad]="!l.gateway">
+          <mat-icon aria-hidden="true">graphic_eq</mat-icon> Pasarela de voz
+        </span>
+        <span class="detail" [class.ready]="l.ready">{{ l.detail }}</span>
+      } @else if (lineError(); as e) {
+        <span class="pill bad"><mat-icon aria-hidden="true">cloud_off</mat-icon> API</span>
+        <span class="detail">{{ e }}</span>
+      } @else {
+        <span class="detail">Comprobando la línea…</span>
+      }
+    </div>
+
+    <div class="call-actions">
+      <button mat-flat-button type="button" [disabled]="!canCall()" (click)="callNow()">
+        <mat-icon aria-hidden="true">phone_in_talk</mat-icon>
+        Llamar a la clínica
+      </button>
+      @if (ticket() && !active()) {
+        <button mat-stroked-button type="button" (click)="closeCall()">Cerrar</button>
+      }
+      <span class="hint">
+        Usa la ficha de arriba: a qué clínica llama y para qué
+        @if (target().dry_run) {
+          (Dry-Run: las citas quedan solo en la agenda simulada)
+        }
+      </span>
+    </div>
+
+    @if (starting() || ticket()?.estado === 'llamando') {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    @if (callError(); as err) {
+      <p class="call-error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon> {{ err }}
+      </p>
+    }
+
+    @if (ticket(); as t) {
+      <section class="live" aria-label="Llamada en vivo">
+        <header class="live-header">
+          <strong>{{ stateLabel(t.estado) }}</strong>
+          @if (t.call?.result; as r) {
+            <span class="result">Resultado: {{ r }}</span>
+          }
+        </header>
+
+        @if (lost()) {
+          <p class="lost-note" role="status">
+            <mat-icon aria-hidden="true">sync_problem</mat-icon>
+            La API se reinició durante la llamada y perdió el seguimiento en vivo. La llamada sigue en el teléfono:
+            la transcripción completa aparece aquí en cuanto cuelgue.
+          </p>
+        }
+        @if (events().length) {
+          <div class="transcript" aria-live="polite" #transcriptBox>
+            @for (ev of events(); track $index) {
+              <div class="line" [class.agent]="ev.quien === 'agente'" [class.system]="ev.quien === 'sistema'">
+                <span class="time">{{ ev.t | date: 'HH:mm:ss' }}</span>
+                <strong>{{ speakerLabel(ev.quien, t.call?.contact_name) }}:</strong> {{ ev.texto }}
+                @for (tool of ev.tools; track $index) {
+                  <span class="tool-tag">{{ tool }}</span>
+                }
+                @for (w of ev.warnings; track $index) {
+                  <span class="warn">⚠ {{ w }}</span>
+                }
+              </div>
+            }
+          </div>
+        } @else if (t.estado === 'llamando') {
+          <p class="muted">
+            Sonando en la clínica. Contesta en el celular como recepcionista y saluda primero; el asistente espera a
+            que termines y luego se presenta.
+          </p>
+        } @else if (t.estado === 'sin_contestar') {
+          <p class="muted">La clínica no contestó a tiempo. Revisa que Linphone esté abierto y vuelve a llamar.</p>
+        }
+      </section>
+    }
+
+    <div class="lists">
+      <section aria-label="Agenda">
+        <h3>Agenda</h3>
+        @if (upcoming().length) {
+          <ul class="plain">
+            @for (e of upcoming(); track e.event_id) {
+              <li>
+                <span class="time">{{ e.start_iso | date: 'EEE dd/MM HH:mm' }}</span>
+                {{ e.title }}
+                @if (e.dry_run) {
+                  <span class="tag">simulada</span>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted">Sin citas próximas.</p>
+        }
+      </section>
+    </div>
+  </mat-card-content>
+</mat-card>

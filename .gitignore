@@ -1,0 +1,74 @@
+# Manuscrito del libro del proyecto: NUNCA va al repositorio
+libro/
+
+# Artefactos de entrenamiento que se regeneran (los .jsonl de kaggle/data sí se versionan)
+kaggle/kaggle_subir/
+*.gguf
+*.safetensors
+
+# Python / FastAPI (api/)
+api/__pycache__/
+api/**/__pycache__/
+api/**/*.py[cod]
+api/**/*$py.class
+api/.venv/
+api/venv/
+api/ENV/
+api/.pytest_cache/
+api/.coverage
+api/.mypy_cache/
+api/.ruff_cache/
+
+# Angular / Node (ui/)
+ui/node_modules/
+ui/.pnp
+ui/.pnp.js
+ui/dist/
+ui/tmp/
+ui/.angular/cache/
+ui/out-tsc/
+ui/coverage/
+ui/playwright-report/
+ui/test-results/
+ui/npm-debug.log*
+ui/yarn-debug.log*
+ui/yarn-error.log*
+ui/pnpm-debug.log*
+
+# Environment & local overrides
+.env
+.env.*
+!.env.example
+api/.env
+api/.env.*
+!api/.env.example
+ui/.env
+ui/.env.local
+ui/*.local
+
+# Logs & temporary files
+*.log
+*.tmp
+*.bak
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Telefonía: entorno, modelos de voz, transcripciones de llamadas y credenciales SIP
+telephony/venv/
+telephony/models/
+telephony/logs/
+api/logs/
+api/data/
+telephony/.env

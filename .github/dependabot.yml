@@ -1,0 +1,27 @@
+# Avisos de dependencias una vez al mes, agrupados para no llenar el repo de PRs.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /api
+    schedule: { interval: monthly }
+    groups:
+      api: { patterns: ["*"] }
+
+  - package-ecosystem: pip
+    directory: /telephony
+    schedule: { interval: monthly }
+    groups:
+      telephony: { patterns: ["*"] }
+
+  - package-ecosystem: npm
+    directory: /ui
+    schedule: { interval: monthly }
+    groups:
+      angular:
+        patterns: ["@angular/*", "@angular-devkit/*"]
+      resto:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }

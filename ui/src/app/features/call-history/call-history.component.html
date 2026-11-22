@@ -1,0 +1,121 @@
+<mat-card appearance="outlined" class="history-card">
+  <mat-card-header>
+    <mat-card-title>Historial de llamadas</mat-card-title>
+    <mat-card-subtitle>
+      Todas las llamadas reales, guardadas en la API. Pulsa una para ver la transcripción completa.
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div class="toolbar">
+      <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+        <mat-label>Buscar por clínica, resultado o lo que se dijo</mat-label>
+        <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+        <input matInput [ngModel]="query()" (ngModelChange)="onSearch($event)" />
+      </mat-form-field>
+      <span class="count">{{ total() }} llamada{{ total() === 1 ? '' : 's' }}</span>
+      @if (total() > 0) {
+        <button
+          mat-stroked-button
+          type="button"
+          class="danger"
+          [class.armed]="confirming() === 'todo'"
+          (click)="askDelete('todo')"
+        >
+          <mat-icon aria-hidden="true">delete_sweep</mat-icon>
+          {{ confirming() === 'todo' ? '¿Seguro? Pulsa otra vez para borrar todo' : 'Borrar todo' }}
+        </button>
+      }
+    </div>
+
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    @if (error(); as e) {
+      <p class="error" role="alert"><mat-icon aria-hidden="true">error_outline</mat-icon> {{ e }}</p>
+    }
+
+    @if (items().length) {
+      <ul class="calls">
+        @for (c of items(); track c.voice_id) {
+          <li [class.open]="openId() === c.voice_id">
+            <button type="button" class="row" (click)="toggle(c)" [attr.aria-expanded]="openId() === c.voice_id">
+              <span class="when">{{ c.started | date: 'EEE dd/MM/yyyy HH:mm' }}</span>
+              <span class="who">{{ c.contact_name || 'Sin ficha' }}</span>
+              <span [class]="'tag ' + resultTone(c)">{{ resultLabel(c) }}</span>
+              <span class="meta">
+                {{ c.turnos }} frases
+                @if (c.origen === 'importada') {
+                  · importada
+                } @else if (c.origen === 'pasarela') {
+                  · sin UI
+                }
+              </span>
+              <mat-icon aria-hidden="true" class="chev">{{
+                openId() === c.voice_id ? 'expand_less' : 'expand_more'
+              }}</mat-icon>
+            </button>
+
+            @if (openId() === c.voice_id) {
+              <div class="detail">
+                @if (detailLoading()) {
+                  <mat-progress-bar mode="indeterminate" />
+                } @else if (detail(); as d) {
+                  <div class="detail-head">
+                    <span>
+                      {{ d.started | date: 'HH:mm:ss' }} → {{ d.ended ? (d.ended | date: 'HH:mm:ss') : '…' }}
+                    </span>
+                    <span class="actions">
+                      <button mat-stroked-button type="button" (click)="download(d)">
+                        <mat-icon aria-hidden="true">download</mat-icon> Descargar .txt
+                      </button>
+                      @if (d.status !== 'en_curso') {
+                        <button
+                          mat-stroked-button
+                          type="button"
+                          class="danger"
+                          [class.armed]="confirming() === d.voice_id"
+                          (click)="askDelete(d.voice_id)"
+                        >
+                          <mat-icon aria-hidden="true">delete</mat-icon>
+                          {{ confirming() === d.voice_id ? '¿Seguro? Pulsa otra vez' : 'Borrar' }}
+                        </button>
+                      }
+                    </span>
+                  </div>
+                  <div class="transcript">
+                    @for (ev of d.events; track $index) {
+                      <div class="line" [class.agent]="ev.quien === 'agente'">
+                        <span class="time">{{ ev.t | date: 'HH:mm:ss' }}</span>
+                        <strong>{{ speaker(ev.quien, d.contact_name) }}:</strong> {{ ev.texto }}
+                        @for (tool of ev.tools; track $index) {
+                          <span class="tool-tag">{{ tool }}</span>
+                        }
+                        @for (w of ev.warnings; track $index) {
+                          <span class="warn">⚠ {{ w }}</span>
+                        }
+                      </div>
+                    } @empty {
+                      <p class="muted">Esta llamada no tiene frases guardadas.</p>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (items().length < total()) {
+        <button mat-stroked-button type="button" class="more" [disabled]="loading()" (click)="loadMore()">
+          Cargar más ({{ total() - items().length }})
+        </button>
+      }
+    } @else if (!loading()) {
+      <p class="muted">
+        {{ query() ? 'Ninguna llamada coincide con la búsqueda.' : 'Todavía no hay llamadas en el historial.' }}
+      </p>
+    }
+  </mat-card-content>
+</mat-card>
